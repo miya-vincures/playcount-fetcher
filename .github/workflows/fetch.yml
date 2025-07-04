@@ -1,0 +1,29 @@
+name: Fetch TikTok PlayCount
+
+on:
+  schedule:
+    - cron: '0 23 * * *'
+  workflow_dispatch:
+
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Write credentials.json
+        run: echo "${{ secrets.GOOGLE_CREDS }}" > credentials.json
+
+      - name: Run playcount fetcher
+        env:
+          SHEET_ID: ${{ secrets.SHEET_ID }}
+        run: node fetchPlayCountAndWrite.js
