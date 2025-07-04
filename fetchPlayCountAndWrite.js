@@ -35,7 +35,10 @@ async function fetchPlayCount(url) {
 
 (async () => {
   // 認証
-  const creds = JSON.parse(fs.readFileSync(CREDENTIALS_PATH));
+  const creds = JSON.parse(
+  Buffer.from(process.env.GOOGLE_CREDS_BASE64, 'base64').toString('utf-8')
+);
+
   const doc = new GoogleSpreadsheet(SHEET_ID);
   await doc.useServiceAccountAuth(creds);
   await doc.loadInfo();
