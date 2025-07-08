@@ -18,7 +18,7 @@ function columnToLetter(col) {
   return letter;
 }
 
-// URLからplayCountを抽出
+// TikTokページのHTMLから再生回数を抽出
 async function fetchPlayCount(url) {
   try {
     const res = await axios.get(url, {
@@ -26,37 +26,34 @@ async function fetchPlayCount(url) {
     });
     const html = res.data;
     const match = html.match(/["']?playCount["']?\s*[:=]\s*(\d+)/i);
-    return match ? match[1] : 'N/A';
+    return match ? parseInt(match[1]) : 0;
   } catch (err) {
     console.error(`❌ ${url}: ${err.message}`);
-    return 'ERROR';
+    return 0;
   }
 }
 
 (async () => {
-  // 認証
   const creds = JSON.parse(
-  Buffer.from(process.env.GOOGLE_CREDS_BASE64, 'base64').toString('utf-8')
-);
+    Buffer.from(process.env.GOOGLE_CREDS_BASE64, 'base64').toString('utf-8')
+  );
 
   const doc = new GoogleSpreadsheet(SHEET_ID);
   await doc.useServiceAccountAuth(creds);
   await doc.loadInfo();
 
-  // 対象シート取得
   const sheet = doc.sheetsByTitle[SHEET_NAME];
   if (!sheet) {
     console.error(`❌ シート「${SHEET_NAME}」が見つかりません`);
     return;
   }
 
-  // 行・列を取得
   const rowCount = sheet.rowCount;
   const colCount = sheet.columnCount;
 
-  // 日付列を確認
+  // 今日の日付（"7/5" のような形式）
   const now = new Date();
-  const today = `${now.getMonth() + 1}/${now.getDate()}`; // "7/5"
+  const today = `${now.getMonth() + 1}/${now.getDate()}`;
   await sheet.loadCells(`A1:${columnToLetter(colCount)}${rowCount}`);
 
   let targetCol = null;
@@ -76,6 +73,10 @@ async function fetchPlayCount(url) {
       const cell = sheet.getCell(0, col);
       if (!cell.value) {
         cell.value = today;
+        cell.numberFormat = {
+          type: 'DATE',
+          pattern: 'yyyy/mm/dd'
+        };
         targetCol = col;
         break;
       }
@@ -86,7 +87,7 @@ async function fetchPlayCount(url) {
     }
   }
 
-  // A列のURLを1行ずつ処理
+  // A列（URL）を1行ずつ処理
   for (let row = 1; row < rowCount; row++) {
     const urlCell = sheet.getCell(row, 0);
     const resultCell = sheet.getCell(row, targetCol);
@@ -99,6 +100,11 @@ async function fetchPlayCount(url) {
 
     const playCount = await fetchPlayCount(url);
     resultCell.value = playCount;
+    resultCell.numberFormat = {
+      type: 'NUMBER',
+      pattern: '0'
+    };
+
     console.log(`✅ ${row + 1}行目 (${today}): ${playCount}`);
   }
 
