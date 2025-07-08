@@ -25,5 +25,6 @@ jobs:
 
       - name: Run playcount fetcher
         env:
+          GOOGLE_CREDS_BASE64: ${{ secrets.GOOGLE_CREDS_BASE64 }}
           SHEET_ID: ${{ secrets.SHEET_ID }}
         run: node fetchPlayCountAndWrite.js
